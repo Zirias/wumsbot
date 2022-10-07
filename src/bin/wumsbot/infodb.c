@@ -19,8 +19,12 @@ struct InfoDb
     DB *db;
     size_t rowCapa;
     size_t rowUsed;
+    int locked;
     pthread_mutex_t lock;
 };
+
+#define lock(db) (db)->locked++ || pthread_mutex_lock(&(db)->lock)
+#define unlock(db) --(db)->locked || pthread_mutex_unlock(&(db)->lock)
 
 struct InfoDbRow
 {
@@ -219,6 +223,7 @@ InfoDb *InfoDb_create(const char *filename)
 	    logfmt(L_FATAL, "corrupted database file `%s'", filename);
 	}
 	else if (needsync) self->db->sync(self->db, 0);
+	self->locked = 0;
     }
     else
     {
@@ -235,7 +240,7 @@ InfoDbRow *InfoDb_get(InfoDb *self, const char *key)
     DBT id = { (void *)key, strlen(key) };
     DBT val = { 0 };
     InfoDbRow *row = 0;
-    pthread_mutex_lock(&self->lock);
+    lock(self);
     if (self->db->get(self->db, &id, &val, 0) != 0) goto done;
     if (val.size != 8) goto done;
     id.data = val.data;
@@ -243,7 +248,7 @@ InfoDbRow *InfoDb_get(InfoDb *self, const char *key)
     if (self->db->get(self->db, &id, &val, 0) != 0) goto done;
     row = row_deser(val.data, val.size);
 done:
-    pthread_mutex_unlock(&self->lock);
+    unlock(self);
     return row;
 }
 
@@ -254,7 +259,7 @@ int InfoDb_put(InfoDb *self, const InfoDbRow *row)
     int rc = -1;
     uint8_t nkey[10] = { 0, 2, 0 };
     uint8_t szval[8] = { 0 };
-    pthread_mutex_lock(&self->lock);
+    lock(self);
     int drc = self->db->get(self->db, &id, &val, 0);
     if (drc < 0) goto done;
     if (drc > 0)
@@ -360,12 +365,13 @@ int InfoDb_put(InfoDb *self, const InfoDbRow *row)
     }
     rc = self->db->sync(self->db, 0);
 done:
-    pthread_mutex_unlock(&self->lock);
+    unlock(self);
     return rc;
 }
 
 int InfoDb_add(InfoDb *self, const char *key, const InfoDbEntry *entry)
 {
+    lock(self);
     InfoDbRow *row = InfoDb_get(self, key);
     if (!row) 
     {
@@ -376,6 +382,7 @@ int InfoDb_add(InfoDb *self, const char *key, const InfoDbEntry *entry)
     List_append(row->entries, (InfoDbEntry *)entry, 0);
     int rc = InfoDb_put(self, row);
     InfoDbRow_destroy(row);
+    unlock(self);
     return rc;
 }
 
@@ -388,7 +395,7 @@ InfoDbRow *InfoDb_getRandom(InfoDb *self)
     DBT id = { rndkey, 8 };
     DBT val = { 0 };
     InfoDbRow *row = 0;
-    pthread_mutex_lock(&self->lock);
+    lock(self);
     for (;;)
     {
 	getrandom(&rndid, sizeof rndid, 0);
@@ -402,7 +409,7 @@ InfoDbRow *InfoDb_getRandom(InfoDb *self)
 	    break;
 	}
     }
-    pthread_mutex_unlock(&self->lock);
+    unlock(self);
     return row;
 }
 
