@@ -217,6 +217,61 @@ invalid:
 	    "hat nicht verstanden (?)", 1);
 }
 
+static void vergiss(IrcBotEvent *event)
+{
+    const char *arg = IrcBotEvent_arg(event);
+    size_t eqpos;
+    IrcBotResponse *response = IrcBotEvent_response(event);
+    if (!arg || !arg[(eqpos = strcspn(arg, "="))]) goto invalid;
+    char *key = normalizeWs(arg, eqpos);
+    char *val = normalizeWs(arg+eqpos+1, 0);
+    if (!key || !val)
+    {
+	free(val);
+	free(key);
+	goto invalid;
+    }
+    InfoDbRow *row = InfoDb_get(infoDb, key);
+    if (!row) goto unknown;
+    ListIterator *i = List_iterator(InfoDbRow_entries(row));
+    while (ListIterator_moveNext(i))
+    {
+	InfoDbEntry *entry = ListIterator_current(i);
+	if (!strcmp(val, InfoDbEntry_description(entry)))
+	{
+	    List_remove(InfoDbRow_entries(row), entry);
+	    InfoDbEntry_destroy(entry);
+	    if (InfoDb_put(infoDb, row) < 0)
+	    {
+		IrcBotResponse_addMsg(response, IrcBotEvent_origin(event),
+			"hat ein Datenbankproblem :o", 1);
+	    }
+	    else
+	    {
+		IrcBotResponse_addMsg(response, IrcBotEvent_origin(event),
+			"Ok, vergessen!", 0);
+	    }
+	    ListIterator_destroy(i);
+	    InfoDbRow_destroy(row);
+	    free(val);
+	    free(key);
+	    return;
+	}
+    }
+    ListIterator_destroy(i);
+unknown:
+    InfoDbRow_destroy(row);
+    free(val);
+    free(key);
+    IrcBotResponse_addMsg(response, IrcBotEvent_origin(event),
+	    "wusste davon nichts...", 1);
+    return;
+
+invalid:
+    IrcBotResponse_addMsg(response, IrcBotEvent_origin(event),
+	    "hat nicht verstanden (?)", 1);
+}
+
 static void started(void)
 {
     setSyslogLogger("wumsbot", LOG_DAEMON, 0);
@@ -248,6 +303,7 @@ int main(int argc, char **argv)
     IrcBot_addHandler(IBET_BOTCOMMAND, 0, ORIGIN_CHANNEL, "info", info);
     IrcBot_addHandler(IBET_BOTCOMMAND, 0, ORIGIN_CHANNEL, "lerne", lerne);
     IrcBot_addHandler(IBET_BOTCOMMAND, 0, ORIGIN_CHANNEL, "lern", lerne);
+    IrcBot_addHandler(IBET_BOTCOMMAND, 0, ORIGIN_CHANNEL, "vergiss", vergiss);
 
     srand(time(0));
 
