@@ -3,7 +3,6 @@
 
 #include <ircbot/decl.h>
 
-#include <stddef.h>
 #include <time.h>
 
 C_CLASS_DECL(InfoDb);
@@ -12,7 +11,6 @@ C_CLASS_DECL(InfoDbEntry);
 C_CLASS_DECL(List);
 
 InfoDb *InfoDb_create(const char *filename) ATTR_NONNULL((1));
-size_t InfoDb_rowCount(const InfoDb *self) CMETHOD ATTR_PURE;
 InfoDbRow *InfoDb_get(InfoDb *self, const char *key) CMETHOD ATTR_NONNULL((2));
 int InfoDb_put(InfoDb *self, const InfoDbRow *row) CMETHOD ATTR_NONNULL((2));
 int InfoDb_add(InfoDb *self, const char *key, const InfoDbEntry *entry)
