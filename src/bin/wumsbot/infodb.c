@@ -238,10 +238,8 @@ InfoDbRow *InfoDb_get(InfoDb *self, const char *key)
     pthread_mutex_lock(&self->lock);
     if (self->db->get(self->db, &id, &val, 0) != 0) goto done;
     if (val.size != 8) goto done;
-    uint8_t idx[9] = { 0 };
-    memcpy(idx+1, val.data, 8);
-    id.data = idx;
-    id.size = 9;
+    id.data = val.data;
+    id.size = 8;
     if (self->db->get(self->db, &id, &val, 0) != 0) goto done;
     row = row_deser(val.data, val.size);
 done:
