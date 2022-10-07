@@ -19,9 +19,11 @@
 #define SERVER "irc.libera.chat"
 #define PORT 6667
 #define NICK "wumsbot"
-#define USER "wumsbot"
-#define REALNAME "wumsbot"
 #define CHANNEL "#bsd-de"
+#define UID 999
+#define PIDFILE "/var/run/wumsbot/wumsbot.pid"
+#define DBFILE "/var/db/wumsbot/wumsbot.db"
+#define LOGIDENT "wumsbot"
 
 static const char *beer[] = {
     "Prost!",
@@ -32,30 +34,6 @@ static const char *beer[] = {
 };
 
 static InfoDb *infoDb;
-
-static void joined(IrcBotEvent *event)
-{
-    IrcBotResponse *response = IrcBotEvent_response(event);
-    char buf[256];
-    snprintf(buf, 256, "Hallo %s!", IrcBotEvent_arg(event));
-    IrcBotResponse_addMsg(response, IrcBotEvent_origin(event), buf, 0);
-}
-
-static void say(IrcBotEvent *event)
-{
-    IrcBotResponse *response = IrcBotEvent_response(event);
-    const char *arg = IrcBotEvent_arg(event);
-
-    if (!strcmp(arg, "my name"))
-    {
-	IrcBotResponse_addMsg(response, IrcBotEvent_origin(event),
-		IrcBotEvent_from(event), 0);
-    }
-    else
-    {
-	IrcBotResponse_addMsg(response, IrcBotEvent_origin(event), arg, 0);
-    }
-}
 
 static void bier(IrcBotEvent *event)
 {
@@ -75,12 +53,9 @@ static void bier(IrcBotEvent *event)
 	    if (HashTable_get(IrcChannel_nicks(channel), nick))
 	    {
 		snprintf(buf, 256, "wird %s mit Bier abfüllen!", nick);
+		IrcBotResponse_addMsg(response, IrcBotEvent_origin(event),
+			buf, 1);
 	    }
-	    else
-	    {
-		snprintf(buf, 256, "sieht hier keine(n) %s ...", nick);
-	    }
-	    IrcBotResponse_addMsg(response, IrcBotEvent_origin(event), buf, 1);
 	}
 	ListIterator_destroy(i);
 	List_destroy(beerfor);
@@ -89,6 +64,35 @@ static void bier(IrcBotEvent *event)
     {
 	IrcBotResponse_addMsg(response, IrcBotEvent_origin(event),
 		beer[rand() % (sizeof beer / sizeof *beer)], 0);
+    }
+}
+
+static void kaffee(IrcBotEvent *event)
+{
+    const IrcChannel *channel = IrcBotEvent_channel(event);
+    if (!channel) return;
+
+    const char *arg = IrcBotEvent_arg(event);
+    const char *from = IrcBotEvent_from(event);
+    List *coffeefor;
+    IrcBotResponse *response = IrcBotEvent_response(event);
+    if ((arg && (coffeefor = List_fromString(arg, " \t")))
+	    || (from && (coffeefor = List_fromString(from, " \t"))))
+    {
+	char buf[256];
+	ListIterator *i = List_iterator(coffeefor);
+	while (ListIterator_moveNext(i))
+	{
+	    const char *nick = ListIterator_current(i);
+	    if (HashTable_get(IrcChannel_nicks(channel), nick))
+	    {
+		snprintf(buf, 256, "reicht %s eine Tasse Kaffee...", nick);
+		IrcBotResponse_addMsg(response, IrcBotEvent_origin(event),
+			buf, 1);
+	    }
+	}
+	ListIterator_destroy(i);
+	List_destroy(coffeefor);
     }
 }
 
@@ -274,7 +278,7 @@ invalid:
 
 static void started(void)
 {
-    setSyslogLogger("wumsbot", LOG_DAEMON, 0);
+    setSyslogLogger(LOGIDENT, LOG_DAEMON, 0);
 }
 
 int main(int argc, char **argv)
@@ -285,25 +289,25 @@ int main(int argc, char **argv)
     }
     else
     {
-	setSyslogLogger("wumsbot", LOG_DAEMON, 1);
-	IrcBot_daemonize(-1, -1, "/tmp/wumsbot.pid", started);
+	setSyslogLogger(LOGIDENT, LOG_DAEMON, 1);
+	IrcBot_daemonize(UID, -1, PIDFILE, started);
     }
 
-    infoDb = InfoDb_create("/tmp/wumsbot.db");
+    infoDb = InfoDb_create(DBFILE);
     if (!infoDb) return EXIT_FAILURE;
 
-    IrcServer *server = IrcServer_create(IRCNET, SERVER, PORT,
-	    NICK, USER, REALNAME);
+    IrcServer *server = IrcServer_create(IRCNET, SERVER, PORT, NICK, 0, 0);
     IrcServer_join(server, CHANNEL);
     IrcBot_addServer(server);
 
-    IrcBot_addHandler(IBET_JOINED, 0, 0, 0, joined);
-    IrcBot_addHandler(IBET_BOTCOMMAND, 0, ORIGIN_CHANNEL, "say", say);
     IrcBot_addHandler(IBET_BOTCOMMAND, 0, ORIGIN_CHANNEL, "bier", bier);
+    IrcBot_addHandler(IBET_BOTCOMMAND, 0, ORIGIN_CHANNEL, "kaffee", kaffee);
     IrcBot_addHandler(IBET_BOTCOMMAND, 0, ORIGIN_CHANNEL, "info", info);
     IrcBot_addHandler(IBET_BOTCOMMAND, 0, ORIGIN_CHANNEL, "lerne", lerne);
     IrcBot_addHandler(IBET_BOTCOMMAND, 0, ORIGIN_CHANNEL, "lern", lerne);
+    IrcBot_addHandler(IBET_BOTCOMMAND, 0, ORIGIN_CHANNEL, "learn", lerne);
     IrcBot_addHandler(IBET_BOTCOMMAND, 0, ORIGIN_CHANNEL, "vergiss", vergiss);
+    IrcBot_addHandler(IBET_BOTCOMMAND, 0, ORIGIN_CHANNEL, "forget", vergiss);
 
     srand(time(0));
 
