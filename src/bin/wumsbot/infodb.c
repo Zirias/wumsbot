@@ -237,7 +237,8 @@ InfoDb *InfoDb_create(const char *filename)
 
 InfoDbRow *InfoDb_get(InfoDb *self, const char *key)
 {
-    DBT id = { (void *)key, strlen(key) };
+    char *lowerkey = lowerstr(key);
+    DBT id = { lowerkey, strlen(lowerkey) };
     DBT val = { 0 };
     InfoDbRow *row = 0;
     lock(self);
@@ -248,13 +249,15 @@ InfoDbRow *InfoDb_get(InfoDb *self, const char *key)
     if (self->db->get(self->db, &id, &val, 0) != 0) goto done;
     row = row_deser(val.data, val.size);
 done:
+    free(lowerkey);
     unlock(self);
     return row;
 }
 
 int InfoDb_put(InfoDb *self, const InfoDbRow *row)
 {
-    DBT id = { row->key, strlen(row->key) };
+    char *lowerkey = lowerstr(row->key);
+    DBT id = { lowerkey, strlen(lowerkey) };
     DBT val = { 0 };
     int rc = -1;
     uint8_t nkey[10] = { 0, 2, 0 };
@@ -365,6 +368,7 @@ int InfoDb_put(InfoDb *self, const InfoDbRow *row)
     }
     rc = self->db->sync(self->db, 0);
 done:
+    free(lowerkey);
     unlock(self);
     return rc;
 }
