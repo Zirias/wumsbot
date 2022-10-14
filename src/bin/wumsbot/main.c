@@ -41,24 +41,24 @@ static void bier(IrcBotEvent *event)
     if (!channel) return;
 
     const char *arg = IrcBotEvent_arg(event);
-    List *beerfor;
+    IBList *beerfor;
     IrcBotResponse *response = IrcBotEvent_response(event);
-    if (arg && (beerfor = List_fromString(arg, " \t")))
+    if (arg && (beerfor = IBList_fromString(arg, " \t")))
     {
 	char buf[256];
-	ListIterator *i = List_iterator(beerfor);
-	while (ListIterator_moveNext(i))
+	IBListIterator *i = IBList_iterator(beerfor);
+	while (IBListIterator_moveNext(i))
 	{
-	    const char *nick = ListIterator_current(i);
-	    if (HashTable_get(IrcChannel_nicks(channel), nick))
+	    const char *nick = IBListIterator_current(i);
+	    if (IBHashTable_get(IrcChannel_nicks(channel), nick))
 	    {
 		snprintf(buf, 256, "wird %s mit Bier abfüllen!", nick);
 		IrcBotResponse_addMsg(response, IrcBotEvent_origin(event),
 			buf, 1);
 	    }
 	}
-	ListIterator_destroy(i);
-	List_destroy(beerfor);
+	IBListIterator_destroy(i);
+	IBList_destroy(beerfor);
     }
     else
     {
@@ -74,32 +74,32 @@ static void kaffee(IrcBotEvent *event)
 
     const char *arg = IrcBotEvent_arg(event);
     const char *from = IrcBotEvent_from(event);
-    List *coffeefor;
+    IBList *coffeefor;
     IrcBotResponse *response = IrcBotEvent_response(event);
-    if ((arg && (coffeefor = List_fromString(arg, " \t")))
-	    || (from && (coffeefor = List_fromString(from, " \t"))))
+    if ((arg && (coffeefor = IBList_fromString(arg, " \t")))
+	    || (from && (coffeefor = IBList_fromString(from, " \t"))))
     {
 	char buf[256];
-	ListIterator *i = List_iterator(coffeefor);
-	while (ListIterator_moveNext(i))
+	IBListIterator *i = IBList_iterator(coffeefor);
+	while (IBListIterator_moveNext(i))
 	{
-	    const char *nick = ListIterator_current(i);
-	    if (HashTable_get(IrcChannel_nicks(channel), nick))
+	    const char *nick = IBListIterator_current(i);
+	    if (IBHashTable_get(IrcChannel_nicks(channel), nick))
 	    {
 		snprintf(buf, 256, "reicht %s eine Tasse Kaffee...", nick);
 		IrcBotResponse_addMsg(response, IrcBotEvent_origin(event),
 			buf, 1);
 	    }
 	}
-	ListIterator_destroy(i);
-	List_destroy(coffeefor);
+	IBListIterator_destroy(i);
+	IBList_destroy(coffeefor);
     }
 }
 
 static char *normalizeWs(const char *input, size_t len)
 {
     if (!len) len = strlen(input);
-    char *output = xmalloc(len+1);
+    char *output = IB_xmalloc(len+1);
     const char *r = input;
     char *w = output;
     while (isspace(*r)) { ++r; --len; }
@@ -145,31 +145,31 @@ static void info(IrcBotEvent *event)
     {
 	char date[11];
 	struct tm tm;
-	StringBuilder *sb = StringBuilder_create();
-	StringBuilder_append(sb, InfoDbRow_key(row));
-	StringBuilder_append(sb, " = ");
-	ListIterator *i = List_iterator(InfoDbRow_entries(row));
+	IBStringBuilder *sb = IBStringBuilder_create();
+	IBStringBuilder_append(sb, InfoDbRow_key(row));
+	IBStringBuilder_append(sb, " = ");
+	IBListIterator *i = IBList_iterator(InfoDbRow_entries(row));
 	int first = 1;
-	while (ListIterator_moveNext(i))
+	while (IBListIterator_moveNext(i))
 	{
-	    const InfoDbEntry *entry = ListIterator_current(i);
-	    if (!first) StringBuilder_append(sb, " | ");
+	    const InfoDbEntry *entry = IBListIterator_current(i);
+	    if (!first) IBStringBuilder_append(sb, " | ");
 	    else first = 0;
-	    StringBuilder_append(sb, InfoDbEntry_description(entry));
-	    StringBuilder_append(sb, " [");
-	    StringBuilder_append(sb, InfoDbEntry_author(entry));
-	    StringBuilder_append(sb, ", ");
+	    IBStringBuilder_append(sb, InfoDbEntry_description(entry));
+	    IBStringBuilder_append(sb, " [");
+	    IBStringBuilder_append(sb, InfoDbEntry_author(entry));
+	    IBStringBuilder_append(sb, ", ");
 	    time_t time = InfoDbEntry_time(entry);
 	    gmtime_r(&time, &tm);
 	    strftime(date, 11, "%d.%m.%Y", &tm);
-	    StringBuilder_append(sb, date);
-	    StringBuilder_append(sb, "]");
+	    IBStringBuilder_append(sb, date);
+	    IBStringBuilder_append(sb, "]");
 	}
-	ListIterator_destroy(i);
+	IBListIterator_destroy(i);
 	InfoDbRow_destroy(row);
 	IrcBotResponse_addMsg(response, IrcBotEvent_origin(event),
-		StringBuilder_str(sb), 0);
-	StringBuilder_destroy(sb);
+		IBStringBuilder_str(sb), 0);
+	IBStringBuilder_destroy(sb);
     }
     else
     {
@@ -202,14 +202,14 @@ static void lerne(IrcBotEvent *event)
     }
     else
     {
-	StringBuilder *sb = StringBuilder_create();
-	StringBuilder_append(sb, "Ok, ");
-	StringBuilder_append(sb, key);
-	StringBuilder_append(sb, " = ");
-	StringBuilder_append(sb, val);
+	IBStringBuilder *sb = IBStringBuilder_create();
+	IBStringBuilder_append(sb, "Ok, ");
+	IBStringBuilder_append(sb, key);
+	IBStringBuilder_append(sb, " = ");
+	IBStringBuilder_append(sb, val);
 	IrcBotResponse_addMsg(response, IrcBotEvent_origin(event),
-		StringBuilder_str(sb), 0);
-	StringBuilder_destroy(sb);
+		IBStringBuilder_str(sb), 0);
+	IBStringBuilder_destroy(sb);
     }
     InfoDbEntry_destroy(entry);
     free(val);
@@ -237,13 +237,13 @@ static void vergiss(IrcBotEvent *event)
     }
     InfoDbRow *row = InfoDb_get(infoDb, key);
     if (!row) goto unknown;
-    ListIterator *i = List_iterator(InfoDbRow_entries(row));
-    while (ListIterator_moveNext(i))
+    IBListIterator *i = IBList_iterator(InfoDbRow_entries(row));
+    while (IBListIterator_moveNext(i))
     {
-	InfoDbEntry *entry = ListIterator_current(i);
+	InfoDbEntry *entry = IBListIterator_current(i);
 	if (!strcmp(val, InfoDbEntry_description(entry)))
 	{
-	    List_remove(InfoDbRow_entries(row), entry);
+	    IBList_remove(InfoDbRow_entries(row), entry);
 	    InfoDbEntry_destroy(entry);
 	    if (InfoDb_put(infoDb, row) < 0)
 	    {
@@ -255,14 +255,14 @@ static void vergiss(IrcBotEvent *event)
 		IrcBotResponse_addMsg(response, IrcBotEvent_origin(event),
 			"Ok, vergessen!", 0);
 	    }
-	    ListIterator_destroy(i);
+	    IBListIterator_destroy(i);
 	    InfoDbRow_destroy(row);
 	    free(val);
 	    free(key);
 	    return;
 	}
     }
-    ListIterator_destroy(i);
+    IBListIterator_destroy(i);
 unknown:
     InfoDbRow_destroy(row);
     free(val);
@@ -278,23 +278,34 @@ invalid:
 
 static void started(void)
 {
-    setSyslogLogger(LOGIDENT, LOG_DAEMON, 0);
+    IBLog_setSyslogLogger(LOGIDENT, LOG_DAEMON, 0);
+}
+
+static int startup(void)
+{
+    infoDb = InfoDb_create(DBFILE);
+    return infoDb ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
+static void shutdown(void)
+{
+    InfoDb_destroy(infoDb);
 }
 
 int main(int argc, char **argv)
 {
     if (argc == 2 && !strcmp(argv[1], "-f"))
     {
-	setFileLogger(stderr);
+	IBLog_setFileLogger(stderr);
     }
     else
     {
-	setSyslogLogger(LOGIDENT, LOG_DAEMON, 1);
+	IBLog_setSyslogLogger(LOGIDENT, LOG_DAEMON, 1);
 	IrcBot_daemonize(UID, -1, PIDFILE, started);
     }
 
-    infoDb = InfoDb_create(DBFILE);
-    if (!infoDb) return EXIT_FAILURE;
+    IrcBot_startup(startup);
+    IrcBot_shutdown(shutdown);
 
     IrcServer *server = IrcServer_create(IRCNET, SERVER, PORT, NICK, 0, 0);
     IrcServer_join(server, CHANNEL);
@@ -311,8 +322,6 @@ int main(int argc, char **argv)
 
     srand(time(0));
 
-    int rc = IrcBot_run();
-    InfoDb_destroy(infoDb);
-    return rc;
+    return IrcBot_run();
 }
 

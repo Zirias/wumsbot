@@ -8,7 +8,7 @@
 C_CLASS_DECL(InfoDb);
 C_CLASS_DECL(InfoDbRow);
 C_CLASS_DECL(InfoDbEntry);
-C_CLASS_DECL(List);
+C_CLASS_DECL(IBList);
 
 InfoDb *InfoDb_create(const char *filename) ATTR_NONNULL((1));
 InfoDbRow *InfoDb_get(InfoDb *self, const char *key) CMETHOD ATTR_NONNULL((2));
@@ -19,7 +19,7 @@ InfoDbRow *InfoDb_getRandom(InfoDb *self) CMETHOD;
 void InfoDb_destroy(InfoDb *self);
 
 const char *InfoDbRow_key(const InfoDbRow *self) CMETHOD ATTR_RETNONNULL;
-List *InfoDbRow_entries(InfoDbRow *self) CMETHOD ATTR_RETNONNULL;
+IBList *InfoDbRow_entries(InfoDbRow *self) CMETHOD ATTR_RETNONNULL;
 void InfoDbRow_destroy(InfoDbRow *self);
 
 InfoDbEntry *InfoDbEntry_create(const char *description, const char *author)

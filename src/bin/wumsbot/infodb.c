@@ -29,7 +29,7 @@ struct InfoDb
 struct InfoDbRow
 {
     char *key;
-    List *entries;
+    IBList *entries;
 };
 
 struct InfoDbEntry
@@ -103,19 +103,19 @@ static uint8_t *row_ser(const InfoDbRow *row, size_t *size)
 {
     size_t keysz = strlen(row->key) + 1;
     size_t sz = keysz;
-    ListIterator *i = List_iterator(row->entries);
-    while (ListIterator_moveNext(i))
+    IBListIterator *i = IBList_iterator(row->entries);
+    while (IBListIterator_moveNext(i))
     {
-	InfoDbEntry *entry = ListIterator_current(i);
+	InfoDbEntry *entry = IBListIterator_current(i);
 	sz += 9 + entry->authorlen
 	    + strlen(entry->content+entry->authorlen+1) + 2;
     }
-    uint8_t *ser = xmalloc(sz);
+    uint8_t *ser = IB_xmalloc(sz);
     memcpy(ser, row->key, keysz);
     uint8_t *p = ser + keysz;
-    while (ListIterator_moveNext(i))
+    while (IBListIterator_moveNext(i))
     {
-	InfoDbEntry *entry = ListIterator_current(i);
+	InfoDbEntry *entry = IBListIterator_current(i);
 	time_ser(p, entry->time);
 	p += 9;
 	size_t contentsz = entry->authorlen
@@ -123,7 +123,7 @@ static uint8_t *row_ser(const InfoDbRow *row, size_t *size)
 	memcpy(p, entry->content, contentsz);
 	p += contentsz;
     }
-    ListIterator_destroy(i);
+    IBListIterator_destroy(i);
     *size = sz;
     return ser;
 }
@@ -133,9 +133,9 @@ static InfoDbRow *row_deser(const uint8_t *data, size_t datasz)
     const char *key = (const char *)data;
     const char *keyend = memchr(data, 0, datasz);
     if (!keyend) return 0;
-    InfoDbRow *row = xmalloc(sizeof *row);
-    row->key = copystr(key);
-    row->entries = List_create();
+    InfoDbRow *row = IB_xmalloc(sizeof *row);
+    row->key = IB_copystr(key);
+    row->entries = IBList_create();
     size_t keylen = keyend - key;
     data += keylen + 1;
     datasz -= keylen + 1;
@@ -152,12 +152,12 @@ static InfoDbRow *row_deser(const uint8_t *data, size_t datasz)
 	    if (descend)
 	    {
 		size_t desclen = descend - authorend - 1;
-		InfoDbEntry *entry = xmalloc(sizeof *entry
+		InfoDbEntry *entry = IB_xmalloc(sizeof *entry
 			+ authorlen + desclen + 2);
 		entry->authorlen = authorlen;
 		entry->time = time;
 		memcpy(entry->content, data, authorlen+desclen+2);
-		List_append(row->entries, entry, free);
+		IBList_append(row->entries, entry, free);
 		data = (const uint8_t *)descend+1;
 		datasz -= authorlen+desclen+2;
 	    }
@@ -175,7 +175,7 @@ static InfoDbRow *row_deser(const uint8_t *data, size_t datasz)
 
 InfoDb *InfoDb_create(const char *filename)
 {
-    InfoDb *self = xmalloc(sizeof *self);
+    InfoDb *self = IB_xmalloc(sizeof *self);
     if (pthread_mutex_init(&self->lock, 0) != 0)
     {
 	free(self);
@@ -183,7 +183,7 @@ InfoDb *InfoDb_create(const char *filename)
     }
     else if ((self->db = dbopen(filename, O_RDWR|O_CREAT, 0600, DB_BTREE, 0)))
     {
-	logfmt(L_INFO, "database file `%s' opened", filename);
+	IBLog_fmt(L_INFO, "database file `%s' opened", filename);
 	DBT id = { (void *)rowCapaKey, sizeof rowCapaKey };
 	DBT val = { 0 };
 	int needsync = 0;
@@ -220,7 +220,7 @@ InfoDb *InfoDb_create(const char *filename)
 	    pthread_mutex_destroy(&self->lock);
 	    free(self);
 	    self = 0;
-	    logfmt(L_FATAL, "corrupted database file `%s'", filename);
+	    IBLog_fmt(L_FATAL, "corrupted database file `%s'", filename);
 	}
 	else if (needsync) self->db->sync(self->db, 0);
 	self->locked = 0;
@@ -230,14 +230,14 @@ InfoDb *InfoDb_create(const char *filename)
 	pthread_mutex_destroy(&self->lock);
 	free(self);
 	self = 0;
-	logfmt(L_FATAL, "error opening database file `%s'", filename);
+	IBLog_fmt(L_FATAL, "error opening database file `%s'", filename);
     }
     return self;
 }
 
 InfoDbRow *InfoDb_get(InfoDb *self, const char *key)
 {
-    char *lowerkey = lowerstr(key);
+    char *lowerkey = IB_lowerstr(key);
     DBT id = { lowerkey, strlen(lowerkey) };
     DBT val = { 0 };
     InfoDbRow *row = 0;
@@ -256,7 +256,7 @@ done:
 
 int InfoDb_put(InfoDb *self, const InfoDbRow *row)
 {
-    char *lowerkey = lowerstr(row->key);
+    char *lowerkey = IB_lowerstr(row->key);
     DBT id = { lowerkey, strlen(lowerkey) };
     DBT val = { 0 };
     int rc = -1;
@@ -267,7 +267,7 @@ int InfoDb_put(InfoDb *self, const InfoDbRow *row)
     if (drc < 0) goto done;
     if (drc > 0)
     {
-	if (!List_size(row->entries))
+	if (!IBList_size(row->entries))
 	{
 	    rc = 0;
 	    goto done;
@@ -326,7 +326,7 @@ int InfoDb_put(InfoDb *self, const InfoDbRow *row)
     {
 	memcpy(nkey+2, val.data, 8);
     }
-    if (!List_size(row->entries))
+    if (!IBList_size(row->entries))
     {
 	if (self->db->del(self->db, &id, 0) < 0) goto done;
 	id.data = (void *)freeListKey;
@@ -379,11 +379,11 @@ int InfoDb_add(InfoDb *self, const char *key, const InfoDbEntry *entry)
     InfoDbRow *row = InfoDb_get(self, key);
     if (!row) 
     {
-	row = xmalloc(sizeof *row);
-	row->key = copystr(key);
-	row->entries = List_create();
+	row = IB_xmalloc(sizeof *row);
+	row->key = IB_copystr(key);
+	row->entries = IBList_create();
     }
-    List_append(row->entries, (InfoDbEntry *)entry, 0);
+    IBList_append(row->entries, (InfoDbEntry *)entry, 0);
     int rc = InfoDb_put(self, row);
     InfoDbRow_destroy(row);
     unlock(self);
@@ -430,7 +430,7 @@ const char *InfoDbRow_key(const InfoDbRow *self)
     return self->key;
 }
 
-List *InfoDbRow_entries(InfoDbRow *self)
+IBList *InfoDbRow_entries(InfoDbRow *self)
 {
     return self->entries;
 }
@@ -438,7 +438,7 @@ List *InfoDbRow_entries(InfoDbRow *self)
 void InfoDbRow_destroy(InfoDbRow *self)
 {
     if (!self) return;
-    List_destroy(self->entries);
+    IBList_destroy(self->entries);
     free(self->key);
     free(self);
 }
@@ -446,7 +446,7 @@ void InfoDbRow_destroy(InfoDbRow *self)
 InfoDbEntry *InfoDbEntry_create(const char *description, const char *author)
 {
     size_t authorlen = strlen(author);
-    InfoDbEntry *self = xmalloc(sizeof *self
+    InfoDbEntry *self = IB_xmalloc(sizeof *self
 	    + authorlen + strlen(description) + 2);
     strcpy(self->content, author);
     strcpy(self->content + authorlen + 1, description);
