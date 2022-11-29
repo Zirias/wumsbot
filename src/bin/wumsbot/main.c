@@ -17,7 +17,7 @@
 
 #define IRCNET "libera"
 #define SERVER "irc.libera.chat"
-#define PORT 6667
+#define PORT 6697
 #define NICK "wumsbot"
 #define CHANNEL "#bsd-de"
 #define UID 999
@@ -307,7 +307,7 @@ int main(int argc, char **argv)
     IrcBot_startup(startup);
     IrcBot_shutdown(shutdown);
 
-    IrcServer *server = IrcServer_create(IRCNET, SERVER, PORT, NICK, 0, 0);
+    IrcServer *server = IrcServer_create(IRCNET, SERVER, PORT, 1, NICK, 0, 0);
     IrcServer_join(server, CHANNEL);
     IrcBot_addServer(server);
 
