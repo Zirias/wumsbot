@@ -23,6 +23,8 @@
 #define UID 999
 #define PIDFILE "/var/run/wumsbot/wumsbot.pid"
 #define DBFILE "/var/db/wumsbot/wumsbot.db"
+#define CERTFILE "/var/db/wumsbot/wumsbot.crt"
+#define KEYFILE "/var/db/wumsbot/wumsbot.key"
 #define LOGIDENT "wumsbot"
 
 static const char *beer[] = {
@@ -307,7 +309,8 @@ int main(int argc, char **argv)
     IrcBot_startup(startup);
     IrcBot_shutdown(shutdown);
 
-    IrcServer *server = IrcServer_create(IRCNET, SERVER, PORT, 1, NICK, 0, 0);
+    IrcServer *server = IrcServer_create(IRCNET, SERVER, PORT, NICK, 0, 0);
+    IrcServer_enableTls(server, CERTFILE, KEYFILE);
     IrcServer_join(server, CHANNEL);
     IrcBot_addServer(server);
 
