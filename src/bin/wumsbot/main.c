@@ -310,6 +310,7 @@ int main(int argc, char **argv)
     IrcBot_shutdown(shutdown);
 
     IrcServer *server = IrcServer_create(IRCNET, SERVER, PORT, NICK, 0, 0);
+    IrcServer_useIpv6(server);
     IrcServer_enableTls(server, CERTFILE, KEYFILE);
     IrcServer_join(server, CHANNEL);
     IrcBot_addServer(server);
