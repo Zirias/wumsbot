@@ -13,18 +13,43 @@
 #include <string.h>
 #include <sys/random.h>
 #include <sys/types.h>
+#include <threads.h>
 
 struct InfoDb
 {
     DB *db;
     size_t rowCapa;
     size_t rowUsed;
-    int locked;
     pthread_mutex_t lock;
 };
 
-#define lock(db) (db)->locked++ || pthread_mutex_lock(&(db)->lock)
-#define unlock(db) --(db)->locked || pthread_mutex_unlock(&(db)->lock)
+static thread_local InfoDb *lockedDb;
+static thread_local int lockCount;
+
+static void lock(InfoDb *db)
+{
+    if (db == lockedDb)
+    {
+	++lockCount;
+	return;
+    }
+    if (!lockedDb)
+    {
+	lockedDb = db;
+	lockCount = 1;
+    }
+    pthread_mutex_lock(&(db)->lock);
+}
+
+static void unlock(InfoDb *db)
+{
+    if (db == lockedDb)
+    {
+	if (--lockCount) return;
+	lockedDb = 0;
+    }
+    pthread_mutex_unlock(&(db)->lock);
+}
 
 struct InfoDbRow
 {
@@ -223,7 +248,6 @@ InfoDb *InfoDb_create(const char *filename)
 	    IBLog_fmt(L_FATAL, "corrupted database file `%s'", filename);
 	}
 	else if (needsync) self->db->sync(self->db, 0);
-	self->locked = 0;
     }
     else
     {
