@@ -32,7 +32,29 @@ static const char *beer[] = {
     "Feierabend?",
     "Beer is the answer, but I can't remember the question ...",
     "gmBh heißt, geh mal Bier holen!",
-    "Bierpreisbremse jetzt!"
+    "Bierpreisbremse jetzt!",
+    "Mit des Bieres Hochgenuss, wächst des Bauches Radius.",
+    "Bier kalt stellen ist auch irgendwie kochen.",
+    "Wer das Bier nicht ehrt, ist des Deliriums nicht wert!",
+    "The mouth of a perfectly happy man is filled with beer.",
+    "Beer ...a high and mighty liquor.",
+    "Es gibt keine hässlichen Frauen. Es gibt nur zu wenig Bier.",
+    "Im Himmel gibts kein Bier. Drum trinken wir es hier.",
+    "Nur Wasser trinkt der Vierbeiner. Der Mensch, der findet Bier feiner.",
+    "Beer is proof that God loves us and wants us to be happy.",
+    "Beauty is in the eye of the beer holder",
+    "Am Morgen ein Bier und der Tag gehört dir.",
+    "Bier trinken ist besser als Quark reden!",
+    "Durst wird durch Bier erst schön!",
+    "Ein Bier das nicht getrunken wird, hat seinen Beruf verfehlt.",
+    "Zwischen Leber und Milz passt noch immer ein Pils.",
+    "Bier am Morgen vertreibt Kummer und Sorgen!",
+    "Jeder sollte an etwas glauben. Ich glaube ich trinke noch ein Bier.",
+    "Endlich wieder nüchtern. Das muss ich feiern.",
+    "Alkohol löst keine Probleme, aber das tut Milch ja auch nicht.",
+    "Meine mentale Verfassung ist besäufniserregend.",
+    "Wer Asbach trinkt, sieht uralt aus.",
+    "Alcohol, the cause and solution to all of lifes problems."
 };
 
 static InfoDb *infoDb;
